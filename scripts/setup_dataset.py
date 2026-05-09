@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Create a YOLOv8 dataset structure and data.yaml.
+
+Usage:
+  python scripts/setup_dataset.py --root data/my_dataset --classes person,car
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+import yaml
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Create YOLOv8 dataset structure")
+    parser.add_argument("--root", required=True, help="Root dataset directory")
+    parser.add_argument(
+        "--classes",
+        required=True,
+        help="Comma-separated class names (e.g., person,car,bus)",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    root = Path(args.root).resolve()
+
+    # Create standard YOLO directory structure
+    for split in ("train", "val", "test"):
+        (root / "images" / split).mkdir(parents=True, exist_ok=True)
+        (root / "labels" / split).mkdir(parents=True, exist_ok=True)
+
+    classes = [c.strip() for c in args.classes.split(",") if c.strip()]
+    if not classes:
+        raise SystemExit("No classes provided. Use --classes class1,class2")
+
+    data = {
+        "path": str(root),
+        "train": "images/train",
+        "val": "images/val",
+        "test": "images/test",
+        "names": {i: name for i, name in enumerate(classes)},
+    }
+
+    data_path = root / "data.yaml"
+    with data_path.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, sort_keys=False)
+
+    print(f"Created dataset structure at: {root}")
+    print(f"Wrote data.yaml: {data_path}")
+
+
+if __name__ == "__main__":
+    main()
