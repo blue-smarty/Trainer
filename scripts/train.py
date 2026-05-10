@@ -77,8 +77,9 @@ def train_model(
 ) -> None:
     if device is not None:
         normalized_device = device.strip().lower()
+        device_parts = [part.strip() for part in normalized_device.split(",")]
         is_cuda_index_list = normalized_device != "" and all(
-            part.isdigit() for part in normalized_device.split(",")
+            part and part.isdigit() for part in device_parts
         )
         if normalized_device not in SUPPORTED_DEVICES and not is_cuda_index_list:
             raise ValueError(
