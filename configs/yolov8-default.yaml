@@ -1,8 +1,8 @@
-# Default YOLOv8 training config overrides
+# Default YOLO training config overrides
 # You can pass this file with: --cfg configs/yolov8-default.yaml
 
 # Training parameters (examples)
 # epochs: 50
 # imgsz: 640
 # batch: 16
-# device: 0
+# device: 0        # CUDA GPU index, 'cpu', 'mps', or 'hailo8'

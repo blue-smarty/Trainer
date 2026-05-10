@@ -48,16 +48,31 @@ with tab_setup:
             show_exception(exc)
 
 with tab_train:
-    st.subheader("Train YOLOv8 model")
+    st.subheader("Train YOLO model")
     data_yaml = st.selectbox(
         "Path to data.yaml",
         options=list_paths("**/data.yaml", "data/my_dataset/data.yaml"),
     )
-    model_name = st.text_input("Model", value="yolov8n.pt")
+
+    from scripts.train import SUPPORTED_MODELS
+
+    _model_options = SUPPORTED_MODELS + ["custom…"]
+    _model_choice = st.selectbox("Model", options=_model_options, index=0)
+    if _model_choice == "custom…":
+        model_name = st.text_input("Custom model name or path", value="")
+    else:
+        model_name = _model_choice
+
     epochs = st.number_input("Epochs", min_value=1, value=50)
     imgsz = st.number_input("Image size", min_value=32, value=640)
     batch = st.number_input("Batch size", min_value=1, value=16)
-    device = st.text_input("Device (optional)", value="")
+
+    _device_options = ["(auto)", "cpu", "hailo8", "mps", "0", "1"]
+    _device_choice = st.selectbox("Device", options=_device_options, index=0)
+    if _device_choice == "(auto)":
+        device = ""
+    else:
+        device = _device_choice
     project = st.text_input("Project directory", value="runs/detect")
     run_name = st.text_input("Run name", value="train")
     cfg = st.text_input("Config yaml (optional)", value="")
