@@ -36,6 +36,17 @@ python scripts/export_hailo.py --weights runs/detect/train/weights/best.pt --img
 
 This produces an ONNX file that you can compile with the Hailo Dataflow Compiler for Hailo-8/8L.
 
+### 5) Launch the GUI dashboard
+
+```bash
+streamlit run dashboard/app.py
+```
+
+The dashboard provides a simple interface for:
+- creating the dataset structure (`setup_dataset.py`)
+- running training (`train.py`)
+- exporting to ONNX (`export_hailo.py`)
+
 ## Hailo-8/8L Notes
 
 - Use the **latest Hailo SDK/Dataflow Compiler** that supports Hailo-8/8L.
@@ -47,6 +58,8 @@ This produces an ONNX file that you can compile with the Hailo Dataflow Compiler
 ```
 configs/
   yolov8-default.yaml
+dashboard/
+  app.py
 scripts/
   setup_dataset.py
   train.py
