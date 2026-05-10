@@ -4,7 +4,7 @@
 Examples:
   python scripts/train.py --data data/my_dataset/data.yaml --model yolov8n.pt --epochs 50
   python scripts/train.py --data data/my_dataset/data.yaml --model yolov8s.pt --device cpu
-  python scripts/train.py --data data/my_dataset/data.yaml --model yolov8m.pt --device hailo8
+  python scripts/train.py --data data/my_dataset/data.yaml --model yolov8m.pt --device mps
 """
 
 from __future__ import annotations
@@ -29,8 +29,8 @@ SUPPORTED_MODELS = [
     "yolo11x.pt",
 ]
 
-# Valid device options (in addition to integer CUDA indices)
-SUPPORTED_DEVICES = ["cpu", "hailo8", "mps"]
+# Valid string device options (in addition to CUDA indices like 0, 1 or 0,1)
+SUPPORTED_DEVICES = ["cpu", "mps"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
         "--device",
         default=None,
         help=(
-            "Training device: CUDA index (e.g. 0, 1), 'cpu', 'mps', or 'hailo8'. "
+            "Training device: CUDA index (e.g. 0, 1, 0,1), 'cpu', or 'mps'. "
             "Defaults to auto-detect."
         ),
     )
@@ -75,6 +75,19 @@ def train_model(
     device: str | None = None,
     cfg: str | None = None,
 ) -> None:
+    if device is not None:
+        normalized_device = device.strip().lower()
+        device_parts = [part.strip() for part in normalized_device.split(",")]
+        is_cuda_index_list = normalized_device != "" and all(
+            part and part.isdigit() for part in device_parts
+        )
+        if normalized_device not in SUPPORTED_DEVICES and not is_cuda_index_list:
+            raise ValueError(
+                f"Invalid training device '{device}'. Use a PyTorch/Ultralytics device "
+                "such as 'cpu', 'mps', or CUDA indices (for example '0' or '0,1'). "
+                "For Hailo-8/8L, train first and then export to ONNX via scripts/export_hailo.py."
+            )
+
     from ultralytics import YOLO
 
     model = YOLO(model_name)

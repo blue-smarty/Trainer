@@ -66,7 +66,7 @@ with tab_train:
     imgsz = st.number_input("Image size", min_value=32, value=640)
     batch = st.number_input("Batch size", min_value=1, value=16)
 
-    _device_options = ["(auto)", "cpu", "hailo8", "mps", "0", "1"]
+    _device_options = ["(auto)", "cpu", "mps", "0", "1"]
     _device_choice = st.selectbox("Device", options=_device_options, index=0)
     if _device_choice == "(auto)":
         device = ""

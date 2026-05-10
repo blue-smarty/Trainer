@@ -40,7 +40,7 @@ You can choose any Ultralytics-compatible model with `--model`. Common options:
 | `yolo11n.pt` | Nano (v11) | Latest nano |
 | `yolo11s.pt` | Small (v11) | Latest small |
 
-Use `--device` to select the training hardware:
+Use `--device` to select the training hardware (PyTorch/Ultralytics backends only):
 
 ```bash
 # Train on CPU
@@ -49,8 +49,8 @@ python scripts/train.py --data data/my_dataset/data.yaml --model yolov8s.pt --de
 # Train on first CUDA GPU
 python scripts/train.py --data data/my_dataset/data.yaml --model yolov8s.pt --device 0
 
-# Train targeting Hailo-8 (device string passed to Ultralytics)
-python scripts/train.py --data data/my_dataset/data.yaml --model yolov8s.pt --device hailo8
+# Train on Apple Silicon (MPS)
+python scripts/train.py --data data/my_dataset/data.yaml --model yolov8s.pt --device mps
 ```
 
 ### 4) Export to ONNX (for Hailo toolchain)
@@ -69,7 +69,7 @@ streamlit run dashboard/app.py
 
 The dashboard provides a simple interface for:
 - creating the dataset structure (`setup_dataset.py`)
-- running training (`train.py`) — includes model and device selectors (with `hailo8` option)
+- running training (`train.py`) — includes model and PyTorch device selectors
 - exporting to ONNX (`export_hailo.py`)
 
 ## Hailo-8/8L Notes
@@ -77,7 +77,8 @@ The dashboard provides a simple interface for:
 - Use the **latest Hailo SDK/Dataflow Compiler** that supports Hailo-8/8L.
 - After exporting to ONNX, compile to a HEF using Hailo's tools and calibration dataset.
 - Follow Hailo's official documentation for compiler and runtime usage.
-- To target Hailo-8 hardware during the training pipeline, pass `--device hailo8` to `scripts/train.py`.
+- Training runs on PyTorch-compatible devices (`cpu`, CUDA indices, or `mps`).
+- For Hailo-8/8L deployment, train first and then export your trained `.pt` weights to ONNX with `scripts/export_hailo.py`.
 
 ## Repository Layout
 
