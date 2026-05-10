@@ -9,7 +9,6 @@ Examples:
 from __future__ import annotations
 
 import argparse
-from ultralytics import YOLO
 
 
 def parse_args() -> argparse.Namespace:
@@ -27,28 +26,54 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
+def train_model(
+    data: str,
+    model_name: str,
+    epochs: int,
+    imgsz: int,
+    batch: int,
+    project: str,
+    name: str,
+    resume: bool = False,
+    device: str | None = None,
+    cfg: str | None = None,
+) -> None:
+    from ultralytics import YOLO
 
-    model = YOLO(args.model)
-
+    model = YOLO(model_name)
     train_kwargs = {
-        "data": args.data,
-        "epochs": args.epochs,
-        "imgsz": args.imgsz,
-        "batch": args.batch,
-        "project": args.project,
-        "name": args.name,
-        "resume": args.resume,
+        "data": data,
+        "epochs": epochs,
+        "imgsz": imgsz,
+        "batch": batch,
+        "project": project,
+        "name": name,
+        "resume": resume,
     }
 
-    if args.device is not None:
-        train_kwargs["device"] = args.device
+    if device is not None:
+        train_kwargs["device"] = device
 
-    if args.cfg:
-        train_kwargs["cfg"] = args.cfg
+    if cfg:
+        train_kwargs["cfg"] = cfg
 
     model.train(**train_kwargs)
+
+
+def main() -> None:
+    args = parse_args()
+    train_model(
+        data=args.data,
+        model_name=args.model,
+        epochs=args.epochs,
+        imgsz=args.imgsz,
+        batch=args.batch,
+        project=args.project,
+        name=args.name,
+        resume=args.resume,
+        device=args.device,
+        cfg=args.cfg,
+    )
 
 
 if __name__ == "__main__":

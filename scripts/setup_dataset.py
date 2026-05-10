@@ -23,16 +23,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
-    root = Path(args.root).resolve()
+def setup_dataset(root_path: str, classes_csv: str) -> Path:
+    root = Path(root_path).resolve()
 
     # Create standard YOLO directory structure
     for split in ("train", "val", "test"):
         (root / "images" / split).mkdir(parents=True, exist_ok=True)
         (root / "labels" / split).mkdir(parents=True, exist_ok=True)
 
-    classes = [c.strip() for c in args.classes.split(",") if c.strip()]
+    classes = [c.strip() for c in classes_csv.split(",") if c.strip()]
     if not classes:
         raise SystemExit("No classes provided. Use --classes class1,class2")
 
@@ -47,6 +46,14 @@ def main() -> None:
     data_path = root / "data.yaml"
     with data_path.open("w", encoding="utf-8") as f:
         yaml.safe_dump(data, f, sort_keys=False)
+
+    return data_path
+
+
+def main() -> None:
+    args = parse_args()
+    data_path = setup_dataset(root_path=args.root, classes_csv=args.classes)
+    root = Path(args.root).resolve()
 
     print(f"Created dataset structure at: {root}")
     print(f"Wrote data.yaml: {data_path}")

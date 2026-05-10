@@ -8,7 +8,6 @@ Example:
 from __future__ import annotations
 
 import argparse
-from ultralytics import YOLO
 
 
 def parse_args() -> argparse.Namespace:
@@ -21,17 +20,34 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
+def export_onnx(
+    weights: str,
+    imgsz: int = 640,
+    batch: int = 1,
+    opset: int = 12,
+    dynamic: bool = False,
+) -> None:
+    from ultralytics import YOLO
 
-    model = YOLO(args.weights)
+    model = YOLO(weights)
     model.export(
         format="onnx",
+        imgsz=imgsz,
+        batch=batch,
+        opset=opset,
+        dynamic=dynamic,
+        simplify=True,
+    )
+
+
+def main() -> None:
+    args = parse_args()
+    export_onnx(
+        weights=args.weights,
         imgsz=args.imgsz,
         batch=args.batch,
         opset=args.opset,
         dynamic=args.dynamic,
-        simplify=True,
     )
 
 

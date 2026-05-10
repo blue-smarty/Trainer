@@ -4,34 +4,20 @@
 from __future__ import annotations
 
 from pathlib import Path
-import subprocess
 import sys
 
 import streamlit as st
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS_DIR = REPO_ROOT / "scripts"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.setup_dataset import setup_dataset
 
 
-def run_command(command: list[str]) -> None:
-    """Run a repository script and show output."""
-    result = subprocess.run(
-        command,
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    st.code(" ".join(command), language="bash")
-    if result.stdout:
-        st.text_area("stdout", value=result.stdout, height=180)
-    if result.stderr:
-        st.text_area("stderr", value=result.stderr, height=180)
-    if result.returncode == 0:
-        st.success("Command completed successfully.")
-    else:
-        st.error(f"Command failed with exit code {result.returncode}.")
+def show_exception(exc: Exception) -> None:
+    st.error(f"Operation failed: {exc}")
 
 
 st.set_page_config(page_title="Trainer Dashboard", layout="wide")
@@ -47,16 +33,11 @@ with tab_setup:
     dataset_root = st.text_input("Dataset root", value="data/my_dataset")
     classes = st.text_input("Classes (comma-separated)", value="person,car,bus")
     if st.button("Run dataset setup"):
-        run_command(
-            [
-                sys.executable,
-                str(SCRIPTS_DIR / "setup_dataset.py"),
-                "--root",
-                dataset_root,
-                "--classes",
-                classes,
-            ]
-        )
+        try:
+            data_yaml_path = setup_dataset(root_path=dataset_root, classes_csv=classes)
+            st.success(f"Created dataset structure and wrote: {data_yaml_path}")
+        except Exception as exc:  # pragma: no cover - UI feedback path
+            show_exception(exc)
 
 with tab_train:
     st.subheader("Train YOLOv8 model")
@@ -71,31 +52,28 @@ with tab_train:
     cfg = st.text_input("Config yaml (optional)", value="")
     resume = st.checkbox("Resume previous run")
     if st.button("Run training"):
-        cmd = [
-            sys.executable,
-            str(SCRIPTS_DIR / "train.py"),
-            "--data",
-            data_yaml,
-            "--model",
-            model_name,
-            "--epochs",
-            str(epochs),
-            "--imgsz",
-            str(imgsz),
-            "--batch",
-            str(batch),
-            "--project",
-            project,
-            "--name",
-            run_name,
-        ]
-        if device.strip():
-            cmd.extend(["--device", device.strip()])
-        if cfg.strip():
-            cmd.extend(["--cfg", cfg.strip()])
-        if resume:
-            cmd.append("--resume")
-        run_command(cmd)
+        data_path = Path(data_yaml).expanduser()
+        if not data_path.exists():
+            st.error(f"data.yaml not found: {data_path}")
+        else:
+            try:
+                from scripts.train import train_model
+
+                train_model(
+                    data=str(data_path),
+                    model_name=model_name,
+                    epochs=int(epochs),
+                    imgsz=int(imgsz),
+                    batch=int(batch),
+                    project=project,
+                    name=run_name,
+                    resume=resume,
+                    device=device.strip() or None,
+                    cfg=cfg.strip() or None,
+                )
+                st.success("Training command started and completed.")
+            except Exception as exc:  # pragma: no cover - UI feedback path
+                show_exception(exc)
 
 with tab_export:
     st.subheader("Export trained model to ONNX")
@@ -107,18 +85,20 @@ with tab_export:
     opset = st.number_input("ONNX opset", min_value=9, value=12)
     dynamic = st.checkbox("Dynamic shapes")
     if st.button("Run ONNX export"):
-        cmd = [
-            sys.executable,
-            str(SCRIPTS_DIR / "export_hailo.py"),
-            "--weights",
-            weights,
-            "--imgsz",
-            str(export_imgsz),
-            "--batch",
-            str(export_batch),
-            "--opset",
-            str(opset),
-        ]
-        if dynamic:
-            cmd.append("--dynamic")
-        run_command(cmd)
+        weights_path = Path(weights).expanduser()
+        if not weights_path.exists():
+            st.error(f"Weights file not found: {weights_path}")
+        else:
+            try:
+                from scripts.export_hailo import export_onnx
+
+                export_onnx(
+                    weights=str(weights_path),
+                    imgsz=int(export_imgsz),
+                    batch=int(export_batch),
+                    opset=int(opset),
+                    dynamic=dynamic,
+                )
+                st.success("ONNX export completed.")
+            except Exception as exc:  # pragma: no cover - UI feedback path
+                show_exception(exc)
