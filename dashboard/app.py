@@ -14,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.setup_dataset import setup_dataset
+from scripts.train import SUPPORTED_MODELS
 
 
 def show_exception(exc: Exception) -> None:
@@ -53,8 +54,6 @@ with tab_train:
         "Path to data.yaml",
         options=list_paths("**/data.yaml", "data/my_dataset/data.yaml"),
     )
-
-    from scripts.train import SUPPORTED_MODELS
 
     _model_options = SUPPORTED_MODELS + ["custom…"]
     _model_choice = st.selectbox("Model", options=_model_options, index=0)
