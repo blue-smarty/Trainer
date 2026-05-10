@@ -75,12 +75,17 @@ def train_model(
     device: str | None = None,
     cfg: str | None = None,
 ) -> None:
-    if device is not None and device.strip().lower() == "hailo8":
-        raise ValueError(
-            "Invalid training device 'hailo8'. Use a PyTorch/Ultralytics device "
-            "such as 'cpu', 'mps', or CUDA indices (for example '0' or '0,1'). "
-            "For Hailo-8/8L, train first and then export to ONNX via scripts/export_hailo.py."
+    if device is not None:
+        normalized_device = device.strip().lower()
+        is_cuda_index_list = normalized_device != "" and all(
+            part.isdigit() for part in normalized_device.split(",")
         )
+        if normalized_device not in SUPPORTED_DEVICES and not is_cuda_index_list:
+            raise ValueError(
+                f"Invalid training device '{device}'. Use a PyTorch/Ultralytics device "
+                "such as 'cpu', 'mps', or CUDA indices (for example '0' or '0,1'). "
+                "For Hailo-8/8L, train first and then export to ONNX via scripts/export_hailo.py."
+            )
 
     from ultralytics import YOLO
 
