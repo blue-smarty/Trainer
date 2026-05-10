@@ -1,24 +1,61 @@
 #!/usr/bin/env python3
-"""Train a YOLOv8 model for object detection.
+"""Train a YOLO model for object detection.
 
 Examples:
   python scripts/train.py --data data/my_dataset/data.yaml --model yolov8n.pt --epochs 50
   python scripts/train.py --data data/my_dataset/data.yaml --model yolov8s.pt --device cpu
+  python scripts/train.py --data data/my_dataset/data.yaml --model yolov8m.pt --device mps
 """
 
 from __future__ import annotations
 
 import argparse
 
+# Common YOLO models available via Ultralytics
+SUPPORTED_MODELS = [
+    "yolov8n.pt",
+    "yolov8s.pt",
+    "yolov8m.pt",
+    "yolov8l.pt",
+    "yolov8x.pt",
+    "yolov8n-cls.pt",
+    "yolov8s-cls.pt",
+    "yolov8n-seg.pt",
+    "yolov8s-seg.pt",
+    "yolo11n.pt",
+    "yolo11s.pt",
+    "yolo11m.pt",
+    "yolo11l.pt",
+    "yolo11x.pt",
+]
+
+# Valid string device options (in addition to CUDA indices like 0, 1 or 0,1)
+SUPPORTED_DEVICES = ["cpu", "mps"]
+
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train YOLOv8 model")
+    parser = argparse.ArgumentParser(description="Train YOLO model")
     parser.add_argument("--data", required=True, help="Path to data.yaml")
-    parser.add_argument("--model", default="yolov8n.pt", help="Model name or path")
+    parser.add_argument(
+        "--model",
+        default="yolov8n.pt",
+        help=(
+            "Model name or path (e.g. yolov8n.pt, yolov8s.pt, yolov8m.pt, "
+            "yolov8l.pt, yolov8x.pt, yolo11n.pt). "
+            "Can be any Ultralytics-compatible model file or pretrained name."
+        ),
+    )
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=16)
-    parser.add_argument("--device", default=None, help="cuda device index, 'cpu', or None")
+    parser.add_argument(
+        "--device",
+        default=None,
+        help=(
+            "Training device: CUDA index (e.g. 0, 1, 0,1), 'cpu', or 'mps'. "
+            "Defaults to auto-detect."
+        ),
+    )
     parser.add_argument("--project", default="runs/detect")
     parser.add_argument("--name", default="train")
     parser.add_argument("--resume", action="store_true")
@@ -38,6 +75,19 @@ def train_model(
     device: str | None = None,
     cfg: str | None = None,
 ) -> None:
+    if device is not None:
+        normalized_device = device.strip().lower()
+        device_parts = [part.strip() for part in normalized_device.split(",")]
+        is_cuda_index_list = normalized_device != "" and all(
+            part and part.isdigit() for part in device_parts
+        )
+        if normalized_device not in SUPPORTED_DEVICES and not is_cuda_index_list:
+            raise ValueError(
+                f"Invalid training device '{device}'. Use a PyTorch/Ultralytics device "
+                "such as 'cpu', 'mps', or CUDA indices (for example '0' or '0,1'). "
+                "For Hailo-8/8L, train first and then export to ONNX via scripts/export_hailo.py."
+            )
+
     from ultralytics import YOLO
 
     model = YOLO(model_name)
