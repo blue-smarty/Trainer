@@ -20,6 +20,14 @@ def show_exception(exc: Exception) -> None:
     st.error(f"Operation failed: {exc}")
 
 
+def list_paths(pattern: str, default_value: str) -> list[str]:
+    options = {default_value}
+    for path in REPO_ROOT.glob(pattern):
+        if path.is_file():
+            options.add(str(path.relative_to(REPO_ROOT)))
+    return sorted(options)
+
+
 st.set_page_config(page_title="Trainer Dashboard", layout="wide")
 st.title("Trainer Dashboard")
 st.caption("Run dataset setup, model training, and ONNX export from one place.")
@@ -41,7 +49,10 @@ with tab_setup:
 
 with tab_train:
     st.subheader("Train YOLOv8 model")
-    data_yaml = st.text_input("Path to data.yaml", value="data/my_dataset/data.yaml")
+    data_yaml = st.selectbox(
+        "Path to data.yaml",
+        options=list_paths("**/data.yaml", "data/my_dataset/data.yaml"),
+    )
     model_name = st.text_input("Model", value="yolov8n.pt")
     epochs = st.number_input("Epochs", min_value=1, value=50)
     imgsz = st.number_input("Image size", min_value=32, value=640)
@@ -52,7 +63,7 @@ with tab_train:
     cfg = st.text_input("Config yaml (optional)", value="")
     resume = st.checkbox("Resume previous run")
     if st.button("Run training"):
-        data_path = Path(data_yaml).expanduser()
+        data_path = (REPO_ROOT / data_yaml).resolve()
         if not data_path.exists():
             st.error(f"data.yaml not found: {data_path}")
         else:
@@ -71,21 +82,23 @@ with tab_train:
                     device=device.strip() or None,
                     cfg=cfg.strip() or None,
                 )
-                st.success("Training command started and completed.")
+                st.success("Training completed successfully.")
             except Exception as exc:  # pragma: no cover - UI feedback path
                 show_exception(exc)
 
 with tab_export:
     st.subheader("Export trained model to ONNX")
-    weights = st.text_input(
-        "Weights path", value="runs/detect/train/weights/best.pt", key="weights"
+    weights = st.selectbox(
+        "Weights path",
+        options=list_paths("**/*.pt", "runs/detect/train/weights/best.pt"),
+        key="weights",
     )
     export_imgsz = st.number_input("Image size", min_value=32, value=640, key="ex_img")
     export_batch = st.number_input("Batch size", min_value=1, value=1, key="ex_batch")
     opset = st.number_input("ONNX opset", min_value=9, value=12)
     dynamic = st.checkbox("Dynamic shapes")
     if st.button("Run ONNX export"):
-        weights_path = Path(weights).expanduser()
+        weights_path = (REPO_ROOT / weights).resolve()
         if not weights_path.exists():
             st.error(f"Weights file not found: {weights_path}")
         else:
