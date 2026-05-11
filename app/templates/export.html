@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Export ONNX - Trainer UI{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h2>Export ONNX</h2>
+    <p>Export trained weights to ONNX using the existing Hailo export workflow.</p>
+    {% if message %}
+    <div class="message {{ message_type }}">{{ message }}</div>
+    {% endif %}
+    <form method="post" action="/export">
+        <label>
+            Weights path
+            <select name="weights" required>
+                {% for option in weights_options %}
+                <option value="{{ option }}" {% if option == form_data.weights %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="grid">
+            <label>
+                Image size
+                <input type="number" name="imgsz" min="32" value="{{ form_data.imgsz }}" required>
+            </label>
+            <label>
+                Batch size
+                <input type="number" name="batch" min="1" value="{{ form_data.batch }}" required>
+            </label>
+            <label>
+                ONNX opset
+                <input type="number" name="opset" min="9" value="{{ form_data.opset }}" required>
+            </label>
+        </div>
+        <label class="checkbox">
+            <input type="checkbox" name="dynamic" value="true" {% if form_data.dynamic %}checked{% endif %}>
+            Dynamic shapes
+        </label>
+        <button type="submit">Run ONNX export</button>
+    </form>
+</section>
+{% endblock %}

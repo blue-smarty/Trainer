@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Trainer UI{% endblock %}</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            background: #111827;
+            color: #f3f4f6;
+        }
+        header, main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+        nav {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        nav a {
+            color: #93c5fd;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        nav a.active {
+            color: #f9fafb;
+        }
+        .card {
+            background: #1f2937;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        form {
+            display: grid;
+            gap: 1rem;
+        }
+        label {
+            display: grid;
+            gap: 0.4rem;
+            font-weight: 600;
+        }
+        input, select, button {
+            font: inherit;
+            padding: 0.7rem 0.8rem;
+            border-radius: 8px;
+            border: 1px solid #4b5563;
+        }
+        input, select {
+            background: #111827;
+            color: #f9fafb;
+        }
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .checkbox input {
+            width: auto;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .message {
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        .message.success {
+            background: #14532d;
+        }
+        .message.error {
+            background: #7f1d1d;
+        }
+        .grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+        code {
+            background: #111827;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+        }
+        a {
+            color: #bfdbfe;
+        }
+        a:hover {
+            color: #dbeafe;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Trainer UI</h1>
+        <p>Run dataset setup, model training, and ONNX export from one place.</p>
+        <nav>
+            <a href="/" {% if active_page == "home" %}class="active"{% endif %}>Home</a>
+            <a href="/setup" {% if active_page == "setup" %}class="active"{% endif %}>Setup Dataset</a>
+            <a href="/train" {% if active_page == "train" %}class="active"{% endif %}>Train Model</a>
+            <a href="/export" {% if active_page == "export" %}class="active"{% endif %}>Export ONNX</a>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
