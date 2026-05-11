@@ -91,7 +91,7 @@ def format_size(path: Path) -> str:
         size = path.stat().st_size
     except OSError:
         return "unknown size"
-    for unit in ("B", "KB", "MB", "GB"):
+    for unit in ("B", "KiB", "MiB", "GiB"):
         if size < 1024:
             return f"{size:.1f} {unit}"
         size = size / 1024

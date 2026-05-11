@@ -78,9 +78,9 @@ st.caption("Run dataset setup, model training, and ONNX export from one place.")
 with st.sidebar:
     st.header("Recent Artifacts")
     _runs_root = REPO_ROOT / "runs" / "detect"
-    _recent = find_recent_runs(_runs_root, max_runs=5)
-    if _recent:
-        for run in _recent:
+    _recent_runs = find_recent_runs(_runs_root, max_runs=5)
+    if _recent_runs:
+        for run in _recent_runs:
             with st.expander(f"📁 {run.name}", expanded=False):
                 st.caption(f"Modified: {format_mtime(run.path)}")
                 if run.best_pt:

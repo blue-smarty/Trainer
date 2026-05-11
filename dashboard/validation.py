@@ -79,7 +79,7 @@ def validate_train_params(
     if epochs < 1:
         errors.append("Epochs must be at least 1.")
     elif epochs > 10000:
-        warnings.append("Epoch count is unusually high (> 10 000).")
+        warnings.append("Epoch count is unusually high (> 10,000).")
 
     if imgsz < 32:
         errors.append("Image size must be at least 32.")
