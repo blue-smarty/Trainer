@@ -40,6 +40,7 @@ DEFAULT_OPSET = 12
 
 
 def list_paths(pattern: str, default_value: str) -> list[str]:
+    """List repository-relative file suggestions for a given glob pattern."""
     options = {default_value}
     for path in REPO_ROOT.glob(pattern):
         if path.is_file():
@@ -47,15 +48,11 @@ def list_paths(pattern: str, default_value: str) -> list[str]:
     return sorted(options)
 
 
-def resolve_repo_path(value: str) -> Path:
-    """Resolve a submitted file path and require it to remain inside REPO_ROOT."""
-    candidate = Path(value).expanduser()
-    if not candidate.is_absolute():
-        candidate = REPO_ROOT / candidate
-    resolved = candidate.resolve()
-    if not resolved.is_relative_to(REPO_ROOT):
-        raise ValueError(f"Path must stay within the repository: {REPO_ROOT}")
-    return resolved
+def resolve_listed_path(value: str, options: list[str]) -> Path:
+    """Resolve a submitted repository-relative path after validating it is a listed option."""
+    if value not in options:
+        raise ValueError("Select one of the discovered repository files.")
+    return (REPO_ROOT / value).resolve()
 
 
 def render_page(request: Request, template_name: str, **context: Any):
@@ -153,10 +150,12 @@ async def run_train(
     cfg: Annotated[str, Form()] = "",
     resume: Annotated[bool, Form()] = False,
 ):
+    message = None
     message_type = "success"
+    data_yaml_options = list_paths("**/data.yaml", DEFAULT_DATA_YAML)
     data_path = None
     try:
-        data_path = resolve_repo_path(data_yaml)
+        data_path = resolve_listed_path(data_yaml, data_yaml_options)
     except ValueError as exc:
         message = str(exc)
         message_type = "error"
@@ -198,7 +197,7 @@ async def run_train(
             "cfg": cfg,
             "resume": resume,
         },
-        data_yaml_options=list_paths("**/data.yaml", DEFAULT_DATA_YAML),
+        data_yaml_options=data_yaml_options,
         message=message,
         message_type=message_type,
     )
@@ -232,10 +231,12 @@ async def run_export(
     opset: Annotated[int, Form(...)],
     dynamic: Annotated[bool, Form()] = False,
 ):
+    message = None
     message_type = "success"
+    weights_options = list_paths("**/*.pt", DEFAULT_WEIGHTS)
     weights_path = None
     try:
-        weights_path = resolve_repo_path(weights)
+        weights_path = resolve_listed_path(weights, weights_options)
     except ValueError as exc:
         message = str(exc)
         message_type = "error"
@@ -267,7 +268,7 @@ async def run_export(
             "opset": opset,
             "dynamic": dynamic,
         },
-        weights_options=list_paths("**/*.pt", DEFAULT_WEIGHTS),
+        weights_options=weights_options,
         message=message,
         message_type=message_type,
     )

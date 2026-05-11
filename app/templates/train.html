@@ -12,12 +12,11 @@
     <form method="post" action="/train">
         <label>
             Path to data.yaml
-            <input type="text" name="data_yaml" value="{{ form_data.data_yaml }}" list="data-yaml-options" required>
-            <datalist id="data-yaml-options">
+            <select name="data_yaml" required>
                 {% for option in data_yaml_options %}
-                <option value="{{ option }}"></option>
+                <option value="{{ option }}" {% if option == form_data.data_yaml %}selected{% endif %}>{{ option }}</option>
                 {% endfor %}
-            </datalist>
+            </select>
         </label>
         <div class="grid">
             <label>

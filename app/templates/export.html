@@ -12,12 +12,11 @@
     <form method="post" action="/export">
         <label>
             Weights path
-            <input type="text" name="weights" value="{{ form_data.weights }}" list="weights-options" required>
-            <datalist id="weights-options">
+            <select name="weights" required>
                 {% for option in weights_options %}
-                <option value="{{ option }}"></option>
+                <option value="{{ option }}" {% if option == form_data.weights %}selected{% endif %}>{{ option }}</option>
                 {% endfor %}
-            </datalist>
+            </select>
         </label>
         <div class="grid">
             <label>
