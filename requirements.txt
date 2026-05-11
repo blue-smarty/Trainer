@@ -2,7 +2,4 @@ ultralytics>=8.0.0
 opencv-python
 numpy
 pyyaml
-fastapi>=0.115.0
-uvicorn>=0.34.0
-jinja2>=3.1.6
-python-multipart>=0.0.27
+streamlit
