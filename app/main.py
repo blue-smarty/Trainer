@@ -48,13 +48,18 @@ def list_paths(pattern: str, default_value: str) -> list[str]:
 
 
 def resolve_repo_path(value: str) -> Path:
+    """Resolve a submitted file path and require it to remain inside REPO_ROOT."""
     candidate = Path(value).expanduser()
     if not candidate.is_absolute():
         candidate = REPO_ROOT / candidate
-    return candidate.resolve()
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(REPO_ROOT):
+        raise ValueError(f"Path must stay within the repository: {REPO_ROOT}")
+    return resolved
 
 
 def render_page(request: Request, template_name: str, **context: Any):
+    """Render a Jinja2 template with the provided request-scoped context."""
     return templates.TemplateResponse(
         request=request,
         name=template_name,
@@ -149,12 +154,16 @@ async def run_train(
     resume: Annotated[bool, Form()] = False,
 ):
     message_type = "success"
-    data_path = resolve_repo_path(data_yaml)
-
-    if not data_path.exists():
+    data_path = None
+    try:
+        data_path = resolve_repo_path(data_yaml)
+    except ValueError as exc:
+        message = str(exc)
+        message_type = "error"
+    if data_path is not None and not data_path.exists():
         message = f"data.yaml not found: {data_path}"
         message_type = "error"
-    else:
+    elif data_path is not None:
         try:
             train_model(
                 data=str(data_path),
@@ -224,12 +233,16 @@ async def run_export(
     dynamic: Annotated[bool, Form()] = False,
 ):
     message_type = "success"
-    weights_path = resolve_repo_path(weights)
-
-    if not weights_path.exists():
+    weights_path = None
+    try:
+        weights_path = resolve_repo_path(weights)
+    except ValueError as exc:
+        message = str(exc)
+        message_type = "error"
+    if weights_path is not None and not weights_path.exists():
         message = f"Weights file not found: {weights_path}"
         message_type = "error"
-    else:
+    elif weights_path is not None:
         try:
             export_onnx(
                 weights=str(weights_path),
