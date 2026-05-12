@@ -229,12 +229,12 @@ class YOLODetectionBackend(BackendAdapter):
         return {"onnx_path": infer_onnx_path(weights_path)}
 
     @staticmethod
-    def _get_run_candidates(project_root: Path, requested_name: str) -> list[Path]:
+    def _get_run_candidates(project_root: Path, run_name_prefix: str) -> list[Path]:
         if not project_root.exists():
             return []
         candidates: list[Path] = []
         for p in project_root.iterdir():
-            if p.is_dir() and (p / "weights").exists() and p.name.startswith(requested_name):
+            if p.is_dir() and (p / "weights").exists() and p.name.startswith(run_name_prefix):
                 candidates.append(p)
         candidates.sort(key=lambda p: p.stat().st_mtime)
         return candidates

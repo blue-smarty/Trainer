@@ -190,14 +190,16 @@ class ImageClassificationBackend(BackendAdapter):
         return {"onnx_path": infer_onnx_path(weights_path)}
 
     @staticmethod
-    def _resolve_run_dir(repo_root: Path, project: str, name: str) -> Path:
+    def _resolve_run_dir(repo_root: Path, project: str, run_name: str) -> Path:
         project_root = Path(project)
         if not project_root.is_absolute():
             project_root = (repo_root / project_root).resolve()
         if not project_root.exists():
-            return project_root / name
-        candidates = [p for p in project_root.iterdir() if p.is_dir() and p.name.startswith(name)]
+            return project_root / run_name
+        candidates = [
+            p for p in project_root.iterdir() if p.is_dir() and p.name.startswith(run_name)
+        ]
         if not candidates:
-            return project_root / name
+            return project_root / run_name
         candidates.sort(key=lambda p: p.stat().st_mtime)
         return candidates[-1]

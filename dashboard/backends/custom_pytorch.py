@@ -120,7 +120,8 @@ class CustomPyTorchBackend(BackendAdapter):
 
     @staticmethod
     def _load_callable(module_path: Path, function_name: str) -> Callable[..., Any]:
-        spec = importlib.util.spec_from_file_location("custom_backend_module", str(module_path))
+        module_name = f"custom_backend_{module_path.stem}_{abs(hash(str(module_path)))}"
+        spec = importlib.util.spec_from_file_location(module_name, str(module_path))
         if spec is None or spec.loader is None:
             raise RuntimeError(f"Could not load module: {module_path}")
         module = importlib.util.module_from_spec(spec)
@@ -133,10 +134,14 @@ class CustomPyTorchBackend(BackendAdapter):
     @staticmethod
     def _invoke(fn: Callable[..., Any], payload: dict[str, Any]) -> Any:
         """Invoke custom function using payload dict or unpacked kwargs."""
-        params = list(inspect.signature(fn).parameters.values())
-        if len(params) == 1 and params[0].kind in (
-            inspect.Parameter.POSITIONAL_ONLY,
-            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        ):
+        if CustomPyTorchBackend._expects_single_mapping_argument(fn):
             return fn(payload)
         return fn(**payload)
+
+    @staticmethod
+    def _expects_single_mapping_argument(fn: Callable[..., Any]) -> bool:
+        params = list(inspect.signature(fn).parameters.values())
+        return len(params) == 1 and params[0].kind in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        )
