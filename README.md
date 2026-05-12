@@ -42,10 +42,10 @@ This produces an ONNX file that you can compile with the Hailo Dataflow Compiler
 streamlit run dashboard/app.py
 ```
 
-The dashboard provides a simple interface for:
-- creating the dataset structure (`setup_dataset.py`)
-- running training (`train.py`)
-- exporting to ONNX (`export_hailo.py`)
+The dashboard provides a backend/task selector with workflows for:
+- YOLO Detection (dataset setup + training + ONNX export)
+- Image Classification (training + ONNX export)
+- Custom PyTorch Model (module-based training + export hooks)
 
 ## Hailo-8/8L Notes
 
