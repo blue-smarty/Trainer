@@ -99,7 +99,7 @@ with st.sidebar:
         else:
             st.info("No training runs found yet.")
     else:
-        st.info("Recent run discovery is backend-defined.")
+        st.info("Run history is not available automatically for this backend.")
 
 
 tab_setup, tab_train, tab_export, tab_artifacts = st.tabs(

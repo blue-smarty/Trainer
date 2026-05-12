@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import json
+import hashlib
 from pathlib import Path
 from typing import Any, Callable
 
@@ -121,7 +122,8 @@ class CustomPyTorchBackend(BackendAdapter):
 
     @staticmethod
     def _load_callable(module_path: Path, function_name: str) -> Callable[..., Any]:
-        module_name = f"custom_backend_{module_path.stem}_{abs(hash(str(module_path)))}"
+        digest = hashlib.sha256(str(module_path).encode("utf-8")).hexdigest()[:16]
+        module_name = f"custom_backend_{module_path.stem}_{digest}"
         spec = importlib.util.spec_from_file_location(module_name, str(module_path))
         if spec is None or spec.loader is None:
             raise RuntimeError(f"Could not load module: {module_path}")
