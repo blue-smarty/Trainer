@@ -28,6 +28,12 @@ This creates the standard YOLOv8 structure and a `data.yaml` for training.
 python scripts/train.py --data data/my_dataset/data.yaml --model yolov8n.pt --epochs 50 --imgsz 640
 ```
 
+For NVIDIA GeForce RTX 2060, you can use either device index `0` or the alias `rtx2060`:
+
+```bash
+python scripts/train.py --data data/my_dataset/data.yaml --model yolov8n.pt --epochs 50 --device rtx2060
+```
+
 ### 4) Export to ONNX (for Hailo toolchain)
 
 ```bash

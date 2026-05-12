@@ -211,7 +211,11 @@ with tab_train:
         device = st.text_input(
             "Device",
             value="",
-            help="Training device: leave blank for auto-detect, `cpu` for CPU, `0` for first GPU, `0,1` for multi-GPU.",
+            help=(
+                "Training device: leave blank for auto-detect, `cpu` for CPU, "
+                "`0` for first GPU, `0,1` for multi-GPU, or `rtx2060` "
+                "(NVIDIA GeForce RTX 2060 alias)."
+            ),
         )
         cfg = st.text_input(
             "Config yaml (optional)",
