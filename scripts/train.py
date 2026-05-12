@@ -21,11 +21,21 @@ DEVICE_ALIASES = {
 def normalize_device(device: str | None) -> str | None:
     """Normalize optional device input while preserving existing pass-through behavior.
 
-    Recognized aliases (e.g. RTX 2060 names) are convenience shortcuts
-    that map to CUDA index `0` for single-GPU/default setups. For multi-GPU
-    hosts, prefer explicit CUDA indices instead of aliases.
+    Recognized aliases (e.g. RTX 2060 names) are convenience shortcuts that
+    map to CUDA index `0` for single-GPU/default setups. For multi-GPU hosts,
+    prefer explicit CUDA indices instead of aliases.
     Any unrecognized value is returned unchanged so Ultralytics can handle full
     device syntax (e.g. `cpu`, `0,1`, `cuda:0`).
+
+    WARNING: RTX 2060 aliases assume that the RTX 2060 is available at CUDA
+    index `0`.
+
+    Args:
+        device: Optional device string provided by CLI/UI.
+
+    Returns:
+        `None` when unset/blank; otherwise an alias-mapped or original
+        device string.
     """
     if device is None:
         return None
