@@ -35,6 +35,7 @@ def show_exception(exc: Exception) -> None:
 
 
 def show_train_result(payload: dict[str, Any]) -> None:
+    """Render training results from backend payload keys: run_dir, weights, and output."""
     run_dir = payload.get("run_dir")
     if run_dir:
         st.markdown("**Training output**")
@@ -50,6 +51,7 @@ def show_train_result(payload: dict[str, Any]) -> None:
 
 
 def show_export_result(payload: dict[str, Any]) -> None:
+    """Render export results from backend payload keys: onnx_path and output."""
     onnx_path = payload.get("onnx_path")
     if onnx_path:
         st.markdown("**Exported file**")

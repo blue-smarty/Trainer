@@ -114,7 +114,7 @@ class CustomPyTorchBackend(BackendAdapter):
         except json.JSONDecodeError as exc:
             errors.append(f"Invalid JSON config: {exc}")
             payload = None
-        if payload == {}:
+        if isinstance(payload, dict) and not payload:
             warnings.append("Config JSON is empty.")
         return ValidationResult(errors=errors, warnings=warnings)
 
@@ -132,6 +132,7 @@ class CustomPyTorchBackend(BackendAdapter):
 
     @staticmethod
     def _invoke(fn: Callable[..., Any], payload: dict[str, Any]) -> Any:
+        """Invoke custom function using payload dict or unpacked kwargs."""
         params = list(inspect.signature(fn).parameters.values())
         if len(params) == 1 and params[0].kind in (
             inspect.Parameter.POSITIONAL_ONLY,

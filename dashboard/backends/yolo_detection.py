@@ -156,7 +156,7 @@ class YOLODetectionBackend(BackendAdapter):
         if not project_root.is_absolute():
             project_root = (repo_root / project_root).resolve()
 
-        before = self._candidate_runs(project_root, config["name"])
+        before = self._get_run_candidates(project_root, config["name"])
         train_model(
             data=str(data_path),
             model_name=config["model_name"],
@@ -169,7 +169,7 @@ class YOLODetectionBackend(BackendAdapter):
             device=config["device"],
             cfg=config["cfg"],
         )
-        after = self._candidate_runs(project_root, config["name"])
+        after = self._get_run_candidates(project_root, config["name"])
         run_dir = self._select_run_dir(after, before, project_root, config["name"])
         weights = sorted((run_dir / "weights").glob("*.pt")) if (run_dir / "weights").exists() else []
         return {"run_dir": run_dir, "weights": weights}
@@ -229,7 +229,7 @@ class YOLODetectionBackend(BackendAdapter):
         return {"onnx_path": infer_onnx_path(weights_path)}
 
     @staticmethod
-    def _candidate_runs(project_root: Path, requested_name: str) -> list[Path]:
+    def _get_run_candidates(project_root: Path, requested_name: str) -> list[Path]:
         if not project_root.exists():
             return []
         candidates: list[Path] = []

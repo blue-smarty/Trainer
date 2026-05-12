@@ -123,9 +123,8 @@ class ImageClassificationBackend(BackendAdapter):
             "project": config["project"],
             "name": config["name"],
             "resume": config["resume"],
+            **({"device": config["device"]} if config["device"] is not None else {}),
         }
-        if config["device"] is not None:
-            train_kwargs["device"] = config["device"]
         model.train(**train_kwargs)
         run_dir = self._resolve_run_dir(repo_root, config["project"], config["name"])
         weights = sorted((run_dir / "weights").glob("*.pt")) if (run_dir / "weights").exists() else []
