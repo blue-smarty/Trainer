@@ -107,6 +107,7 @@ class CustomPyTorchBackend(BackendAdapter):
                 errors.append(f"Module file not found: {module_path}")
         if not config["function_name"]:
             errors.append("Function name must not be empty.")
+        payload: dict[str, Any] | None = None
         try:
             payload = json.loads(config[config_key])
             if not isinstance(payload, dict):

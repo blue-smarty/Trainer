@@ -34,25 +34,25 @@ def show_exception(exc: Exception) -> None:
         st.code(traceback.format_exc(), language="text")
 
 
-def show_train_result(payload: dict[str, Any]) -> None:
+def show_train_result(train_results: dict[str, Any]) -> None:
     """Render training results from payload; supports optional keys run_dir, weights, output."""
-    run_dir = payload.get("run_dir")
+    run_dir = train_results.get("run_dir")
     if run_dir:
         st.markdown("**Training output**")
         st.code(str(run_dir), language="text")
-    weights = payload.get("weights") or []
+    weights = train_results.get("weights") or []
     if weights:
         st.markdown("**Weights found:**")
         for wt in weights:
             st.markdown(f"- `{wt}` ({format_size(wt)})")
-    if "output" in payload:
+    if "output" in train_results:
         st.markdown("**Backend output**")
-        st.code(repr(payload["output"]), language="text")
+        st.code(repr(train_results["output"]), language="text")
 
 
-def show_export_result(payload: dict[str, Any]) -> None:
+def show_export_result(export_results: dict[str, Any]) -> None:
     """Render export results from payload; supports optional keys onnx_path and output."""
-    onnx_path = payload.get("onnx_path")
+    onnx_path = export_results.get("onnx_path")
     if onnx_path:
         st.markdown("**Exported file**")
         col1, col2 = st.columns([3, 1])
@@ -60,9 +60,9 @@ def show_export_result(payload: dict[str, Any]) -> None:
             st.code(str(onnx_path), language="text")
         with col2:
             st.metric("ONNX size", format_size(onnx_path))
-    if "output" in payload:
+    if "output" in export_results:
         st.markdown("**Backend output**")
-        st.code(repr(payload["output"]), language="text")
+        st.code(repr(export_results["output"]), language="text")
 
 
 st.set_page_config(page_title="Trainer Dashboard", layout="wide")
