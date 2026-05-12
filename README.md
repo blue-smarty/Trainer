@@ -28,7 +28,8 @@ This creates the standard YOLOv8 structure and a `data.yaml` for training.
 python scripts/train.py --data data/my_dataset/data.yaml --model yolov8n.pt --epochs 50 --imgsz 640
 ```
 
-For NVIDIA GeForce RTX 2060, you can use either device index `0` or the alias `rtx2060`:
+For NVIDIA GeForce RTX 2060, you can use either device index `0` or the alias `rtx2060`
+(single-GPU/default setups). On multi-GPU hosts, use explicit indices (for example `1` or `0,1`).
 
 ```bash
 python scripts/train.py --data data/my_dataset/data.yaml --model yolov8n.pt --epochs 50 --device rtx2060
