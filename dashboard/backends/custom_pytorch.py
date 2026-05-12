@@ -12,7 +12,7 @@ from dashboard.backends.base import BackendAdapter
 from dashboard.validation import ValidationResult
 
 
-class CustomPytorchBackend(BackendAdapter):
+class CustomPyTorchBackend(BackendAdapter):
     key = "custom_pytorch"
     label = "Custom PyTorch Model"
     description = "Run user-defined PyTorch train/export functions from a Python module."

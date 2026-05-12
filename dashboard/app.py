@@ -18,6 +18,7 @@ from dashboard.backends import get_backend_map
 
 
 def show_validation(result) -> bool:
+    """Render validation errors and warnings; return True when safe to proceed."""
     for msg in result.warnings:
         st.warning(msg)
     for msg in result.errors:

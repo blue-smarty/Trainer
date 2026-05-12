@@ -25,7 +25,7 @@ COMMON_MODELS = [
 ]
 
 
-class YoloDetectionBackend(BackendAdapter):
+class YOLODetectionBackend(BackendAdapter):
     key = "yolo_detection"
     label = "YOLO Detection"
     description = "Ultralytics YOLO object detection workflows."

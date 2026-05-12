@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from dashboard.backends.base import BackendAdapter
-from dashboard.backends.custom_pytorch import CustomPytorchBackend
+from dashboard.backends.custom_pytorch import CustomPyTorchBackend
 from dashboard.backends.image_classification import ImageClassificationBackend
-from dashboard.backends.yolo_detection import YoloDetectionBackend
+from dashboard.backends.yolo_detection import YOLODetectionBackend
 
 
 def get_backends() -> list[BackendAdapter]:
     return [
-        YoloDetectionBackend(),
+        YOLODetectionBackend(),
         ImageClassificationBackend(),
-        CustomPytorchBackend(),
+        CustomPyTorchBackend(),
     ]
 
 
