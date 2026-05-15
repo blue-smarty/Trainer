@@ -11,6 +11,19 @@ from __future__ import annotations
 import argparse
 
 
+def find_gpu() -> str | None:
+    """Return a recommended training device string if a GPU is available."""
+    try:
+        import torch
+    except ImportError:
+        return None
+
+    if not torch.cuda.is_available():
+        return None
+
+    return "0"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train YOLOv8 model")
     parser.add_argument("--data", required=True, help="Path to data.yaml")
@@ -71,7 +84,7 @@ def main() -> None:
         project=args.project,
         name=args.name,
         resume=args.resume,
-        device=args.device,
+        device=args.device if args.device is not None else find_gpu(),
         cfg=args.cfg,
     )
 
