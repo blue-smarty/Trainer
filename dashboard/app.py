@@ -63,6 +63,26 @@ def show_exception(exc: Exception) -> None:
         st.code(traceback.format_exc(), language="text")
 
 
+def detect_training_device() -> tuple[str, str]:
+    """Return a display label and effective device value for training."""
+    try:
+        from scripts.train import find_gpu
+    except Exception:
+        return ("Auto-detect unavailable", "auto")
+
+    detected = find_gpu()
+    if detected is None:
+        return ("CPU / auto-detect", "auto")
+
+    try:
+        import torch
+
+        gpu_name = torch.cuda.get_device_name(int(detected))
+        return (f"GPU detected: {gpu_name}", detected)
+    except Exception:
+        return (f"GPU detected: device {detected}", detected)
+
+
 # ---------------------------------------------------------------------------
 # Page config
 # ---------------------------------------------------------------------------
@@ -148,6 +168,12 @@ with tab_setup:
 
 with tab_train:
     st.subheader("Train YOLOv8 model")
+
+    detected_device_label, detected_device_value = detect_training_device()
+    st.info(
+        f"Detected training device: {detected_device_label} "
+        f"(effective default: `{detected_device_value}`)"
+    )
 
     data_yaml = st.selectbox(
         "Path to data.yaml",
@@ -239,6 +265,11 @@ with tab_train:
                 try:
                     from scripts.train import train_model
 
+                    selected_device = device.strip() or None
+                    effective_device = selected_device or (
+                        None if detected_device_value == "auto" else detected_device_value
+                    )
+
                     train_model(
                         data=str(data_path),
                         model_name=model_name,
@@ -248,10 +279,13 @@ with tab_train:
                         project=project,
                         name=run_name,
                         resume=resume,
-                        device=device.strip() or None,
+                        device=effective_device,
                         cfg=cfg.strip() or None,
                     )
                     st.success("Training completed successfully.")
+                    st.caption(
+                        f"Training used device: `{selected_device or effective_device or 'auto'}`"
+                    )
 
                     run_dir = REPO_ROOT / project / run_name
                     weights_dir = run_dir / "weights"
