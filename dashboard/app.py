@@ -63,24 +63,80 @@ def show_exception(exc: Exception) -> None:
         st.code(traceback.format_exc(), language="text")
 
 
-def detect_training_device() -> tuple[str, str]:
-    """Return a display label and effective device value for training."""
-    try:
-        from scripts.train import find_gpu
-    except Exception:
-        return ("Auto-detect unavailable", "auto")
-
-    detected = find_gpu()
-    if detected is None:
-        return ("CPU / auto-detect", "auto")
+def detect_training_device() -> dict[str, str]:
+    """Return detailed training device information for display and defaults."""
+    info = {
+        "label": "Auto-detect unavailable",
+        "effective_device": "auto",
+        "gpu_count": "unknown",
+        "cuda_available": "unknown",
+        "torch_version": "not available",
+        "cpu_fallback_reason": "Unable to import training device detection.",
+    }
 
     try:
         import torch
+    except ImportError:
+        info["cuda_available"] = "no"
+        info["cpu_fallback_reason"] = "PyTorch is not installed in this environment."
+        return info
+    except Exception as exc:
+        info["cuda_available"] = "unknown"
+        info["cpu_fallback_reason"] = f"PyTorch import failed: {exc}"
+        return info
 
+    info["torch_version"] = getattr(torch, "__version__", "unknown")
+
+    try:
+        cuda_available = bool(torch.cuda.is_available())
+        info["cuda_available"] = "yes" if cuda_available else "no"
+    except Exception as exc:
+        info["cuda_available"] = "unknown"
+        info["cpu_fallback_reason"] = f"CUDA availability check failed: {exc}"
+        return info
+
+    try:
+        gpu_count = torch.cuda.device_count() if cuda_available else 0
+        info["gpu_count"] = str(gpu_count)
+    except Exception as exc:
+        info["gpu_count"] = "unknown"
+        info["cpu_fallback_reason"] = f"GPU count check failed: {exc}"
+        return info
+
+    try:
+        from scripts.train import find_gpu
+    except Exception as exc:
+        info["cpu_fallback_reason"] = f"Could not import find_gpu(): {exc}"
+        return info
+
+    try:
+        detected = find_gpu()
+    except Exception as exc:
+        info["cpu_fallback_reason"] = f"find_gpu() failed: {exc}"
+        return info
+
+    if detected is None:
+        if info["cuda_available"] == "no":
+            info["label"] = "CPU / auto-detect"
+            info["cpu_fallback_reason"] = "CUDA is not available."
+        elif info["gpu_count"] == "0":
+            info["label"] = "CPU / auto-detect"
+            info["cpu_fallback_reason"] = "No CUDA GPUs were detected."
+        else:
+            info["label"] = "CPU / auto-detect"
+            info["cpu_fallback_reason"] = "GPU auto-detection did not select a CUDA device."
+        return info
+
+    info["effective_device"] = detected
+    info["cpu_fallback_reason"] = "Not using CPU fallback."
+
+    try:
         gpu_name = torch.cuda.get_device_name(int(detected))
-        return (f"GPU detected: {gpu_name}", detected)
+        info["label"] = f"GPU detected: {gpu_name}"
     except Exception:
-        return (f"GPU detected: device {detected}", detected)
+        info["label"] = f"GPU detected: device {detected}"
+
+    return info
 
 
 # ---------------------------------------------------------------------------
@@ -169,11 +225,24 @@ with tab_setup:
 with tab_train:
     st.subheader("Train YOLOv8 model")
 
-    detected_device_label, detected_device_value = detect_training_device()
+    device_info = detect_training_device()
     st.info(
-        f"Detected training device: {detected_device_label} "
-        f"(effective default: `{detected_device_value}`)"
+        f"Detected training device: {device_info['label']} "
+        f"(effective default: `{device_info['effective_device']}`)"
     )
+
+    col_dev1, col_dev2, col_dev3 = st.columns(3)
+    with col_dev1:
+        st.metric("GPU count", device_info["gpu_count"])
+    with col_dev2:
+        st.metric("CUDA availability", device_info["cuda_available"])
+    with col_dev3:
+        st.metric("PyTorch version", device_info["torch_version"])
+
+    if device_info["effective_device"] == "auto":
+        st.caption(f"CPU fallback reason: {device_info['cpu_fallback_reason']}")
+    else:
+        st.caption("CPU fallback reason: Not applicable (GPU available).")
 
     data_yaml = st.selectbox(
         "Path to data.yaml",
@@ -267,7 +336,7 @@ with tab_train:
 
                     selected_device = device.strip() or None
                     effective_device = selected_device or (
-                        None if detected_device_value == "auto" else detected_device_value
+                        None if device_info["effective_device"] == "auto" else device_info["effective_device"]
                     )
 
                     train_model(
