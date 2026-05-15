@@ -235,39 +235,71 @@ with tab_train:
         )
         if show_validation(result):
             data_path = (REPO_ROOT / data_yaml).resolve()
-            with st.spinner("Training in progress — this may take a while…"):
-                try:
-                    from scripts.train import train_model
+            progress_text = st.empty()
+            progress_bar = st.progress(0, text="Preparing training…")
+            try:
+                from ultralytics import YOLO
 
-                    train_model(
-                        data=str(data_path),
-                        model_name=model_name,
-                        epochs=int(epochs),
-                        imgsz=int(imgsz),
-                        batch=int(batch),
-                        project=project,
-                        name=run_name,
-                        resume=resume,
-                        device=device.strip() or None,
-                        cfg=cfg.strip() or None,
-                    )
-                    st.success("Training completed successfully.")
+                progress_state = {"last_epoch": 0, "target_epochs": int(epochs)}
 
-                    run_dir = REPO_ROOT / project / run_name
-                    weights_dir = run_dir / "weights"
-                    st.markdown("**Training output**")
-                    st.code(str(run_dir), language="text")
+                def on_train_start(trainer) -> None:
+                    total_epochs = int(getattr(trainer, "epochs", progress_state["target_epochs"]))
+                    progress_state["target_epochs"] = max(total_epochs, 1)
+                    progress_text.info(f"Training started: 0/{progress_state['target_epochs']} epochs")
+                    progress_bar.progress(0, text=f"Training 0/{progress_state['target_epochs']} epochs")
 
-                    if weights_dir.exists():
-                        found_weights = sorted(weights_dir.glob("*.pt"))
-                        if found_weights:
-                            st.markdown("**Weights found:**")
-                            for wt in found_weights:
-                                st.markdown(f"- `{wt.relative_to(REPO_ROOT)}` ({format_size(wt)})")
-                    else:
-                        st.info("Weights directory not found yet; check the run directory above.")
-                except Exception as exc:  # pragma: no cover - UI feedback path
-                    show_exception(exc)
+                def on_train_epoch_end(trainer) -> None:
+                    current_epoch = int(getattr(trainer, "epoch", -1)) + 1
+                    total_epochs = int(getattr(trainer, "epochs", progress_state["target_epochs"]))
+                    total_epochs = max(total_epochs, 1)
+                    progress_state["last_epoch"] = current_epoch
+                    fraction = min(current_epoch / total_epochs, 1.0)
+                    progress_bar.progress(fraction, text=f"Training {current_epoch}/{total_epochs} epochs")
+                    progress_text.info(f"Training progress: {current_epoch}/{total_epochs} epochs")
+
+                with st.spinner("Training in progress — this may take a while…"):
+                    model = YOLO(model_name)
+                    model.add_callback("on_train_start", on_train_start)
+                    model.add_callback("on_train_epoch_end", on_train_epoch_end)
+
+                    train_kwargs = {
+                        "data": str(data_path),
+                        "epochs": int(epochs),
+                        "imgsz": int(imgsz),
+                        "batch": int(batch),
+                        "project": project,
+                        "name": run_name,
+                        "resume": resume,
+                    }
+
+                    if device.strip():
+                        train_kwargs["device"] = device.strip()
+
+                    if cfg.strip():
+                        train_kwargs["cfg"] = cfg.strip()
+
+                    model.train(**train_kwargs)
+
+                progress_bar.progress(1.0, text=f"Training complete: {progress_state['target_epochs']}/{progress_state['target_epochs']} epochs")
+                progress_text.success("Training completed successfully.")
+
+                run_dir = REPO_ROOT / project / run_name
+                weights_dir = run_dir / "weights"
+                st.markdown("**Training output**")
+                st.code(str(run_dir), language="text")
+
+                if weights_dir.exists():
+                    found_weights = sorted(weights_dir.glob("*.pt"))
+                    if found_weights:
+                        st.markdown("**Weights found:**")
+                        for wt in found_weights:
+                            st.markdown(f"- `{wt.relative_to(REPO_ROOT)}` ({format_size(wt)})")
+                else:
+                    st.info("Weights directory not found yet; check the run directory above.")
+            except Exception as exc:  # pragma: no cover - UI feedback path
+                progress_bar.empty()
+                progress_text.empty()
+                show_exception(exc)
 
 # ── Export ONNX ───────────────────────────────────────────────────────────────
 
