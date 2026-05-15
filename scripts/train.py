@@ -24,6 +24,24 @@ def find_gpu() -> str | None:
     return "0"
 
 
+def should_fallback_to_cpu(exc: Exception) -> bool:
+    """Return True when the training error suggests retrying on CPU."""
+    message = str(exc).lower()
+    fallback_markers = (
+        "cudaerrormemoryallocation",
+        "out of memory",
+        "cuda out of memory",
+        "not enough memory",
+        "all cuda-capable devices are busy",
+        "device busy",
+        "cuda error",
+        "no cuda gpus are available",
+        "cuda driver",
+        "initialization error",
+    )
+    return any(marker in message for marker in fallback_markers)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train YOLOv8 model")
     parser.add_argument("--data", required=True, help="Path to data.yaml")
@@ -70,7 +88,19 @@ def train_model(
     if cfg:
         train_kwargs["cfg"] = cfg
 
-    model.train(**train_kwargs)
+    try:
+        model.train(**train_kwargs)
+    except Exception as exc:
+        if device == "cpu" or not should_fallback_to_cpu(exc):
+            raise
+
+        print(
+            "GPU training failed; retrying on CPU. "
+            f"Original error: {exc}"
+        )
+        fallback_kwargs = dict(train_kwargs)
+        fallback_kwargs["device"] = "cpu"
+        model.train(**fallback_kwargs)
 
 
 def main() -> None:
