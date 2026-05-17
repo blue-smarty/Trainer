@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import re
+from itertools import permutations
 from pathlib import Path
 
 # Supported Hailo hardware architectures.  Kept here so that the dashboard
@@ -51,7 +52,7 @@ def _load_calibration_images(
     width: int,
 ) -> "np.ndarray":
     """Load images from *calib_path*, resize to (*height*, *width*), and return
-    a float32 NumPy array of shape ``[N, 3, H, W]`` normalised to ``[0, 1]``.
+    a float32 NumPy array of shape ``[N, H, W, 3]`` normalised to ``[0, 1]``.
     """
     import numpy as np
 
@@ -80,12 +81,37 @@ def _load_calibration_images(
         img = cv2.resize(img, (width, height))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32) / 255.0
-        images.append(img.transpose(2, 0, 1))  # HWC → CHW
+        images.append(img)  # HWC
 
     if not images:
         raise ValueError(f"Could not decode any images from: {calib_dir}")
 
-    return np.stack(images, axis=0)  # shape: [N, 3, H, W]
+    return np.stack(images, axis=0)  # shape: [N, H, W, 3]
+
+
+def _extract_expected_input_shape(error_text: str) -> tuple[int, ...] | None:
+    """Extract expected network input shape from a Hailo mismatch error."""
+    match = re.search(r"network's input shape\s*\(([^)]+)\)", error_text)
+    if not match:
+        return None
+    try:
+        return tuple(int(part.strip()) for part in match.group(1).split(","))
+    except ValueError:
+        return None
+
+
+def _permute_calib_to_expected_shape(
+    calib_data: "np.ndarray", expected_shape: tuple[int, ...]
+) -> "np.ndarray | None":
+    """Return calibration data permuted to expected sample shape when possible."""
+    sample_shape = tuple(int(dim) for dim in calib_data.shape[1:])
+    if len(sample_shape) != len(expected_shape):
+        return None
+
+    for perm in permutations(range(len(sample_shape))):
+        if tuple(sample_shape[i] for i in perm) == expected_shape:
+            return calib_data.transpose((0, *(i + 1 for i in perm)))
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -186,9 +212,22 @@ def convert_onnx_to_hef(
         calib_data = _load_calibration_images(calib_path, h, w)
     else:
         # Use random calibration data as fallback — less accurate quantization.
-        calib_data = np.random.rand(_DEFAULT_RANDOM_CALIB_IMAGES, 3, h, w).astype(np.float32)
+        calib_data = np.random.rand(_DEFAULT_RANDOM_CALIB_IMAGES, h, w, 3).astype(np.float32)
 
-    runner.optimize(calib_data)
+    try:
+        runner.optimize(calib_data)
+    except Exception as exc:
+        expected_shape = _extract_expected_input_shape(str(exc))
+        if not expected_shape:
+            raise
+        permuted = _permute_calib_to_expected_shape(calib_data, expected_shape)
+        if permuted is None:
+            raise
+        print(
+            "Calibration data shape mismatch detected; retrying optimization with "
+            f"sample shape {tuple(permuted.shape[1:])}."
+        )
+        runner.optimize(permuted)
 
     hef_bytes = runner.compile()
     hef_path.write_bytes(hef_bytes)
