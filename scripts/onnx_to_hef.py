@@ -107,6 +107,16 @@ def _permute_calib_to_expected_shape(
     sample_shape = tuple(int(dim) for dim in calib_data.shape[1:])
     if len(sample_shape) != len(expected_shape):
         return None
+    if len(sample_shape) > 4:
+        return None
+
+    # Fast path for the common CHW <-> HWC mismatch.
+    if len(sample_shape) == 3 and sample_shape == (
+        expected_shape[2],
+        expected_shape[0],
+        expected_shape[1],
+    ):
+        return calib_data.transpose((0, 2, 3, 1))
 
     for perm in permutations(range(len(sample_shape))):
         if tuple(sample_shape[i] for i in perm) == expected_shape:
@@ -217,7 +227,10 @@ def convert_onnx_to_hef(
     try:
         runner.optimize(calib_data)
     except Exception as exc:
-        expected_shape = _extract_expected_input_shape(str(exc))
+        error_text = str(exc)
+        if "doesn't match network's input shape" not in error_text:
+            raise
+        expected_shape = _extract_expected_input_shape(error_text)
         if not expected_shape:
             raise
         permuted = _permute_calib_to_expected_shape(calib_data, expected_shape)
