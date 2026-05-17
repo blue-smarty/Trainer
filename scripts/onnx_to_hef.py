@@ -29,6 +29,22 @@ _DEFAULT_RANDOM_CALIB_IMAGES = 16
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _parse_node_names(raw_nodes: list[str] | None) -> list[str]:
+    """Normalize node names by trimming whitespace and dropping empties."""
+    return [n.strip() for n in (raw_nodes or []) if n and n.strip()]
+
+
+def _extract_suggested_end_nodes(error_text: str) -> list[str]:
+    """Extract parser-suggested end nodes from Hailo error text."""
+    match = re.search(
+        r"using these end node names:\s*(.+?)(?:\n|$)",
+        error_text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return []
+    return _parse_node_names(match.group(1).split(","))
+
 def _load_calibration_images(
     calib_path: str,
     height: int,
@@ -137,7 +153,7 @@ def convert_onnx_to_hef(
     model_name = onnx_file.stem
 
     runner = ClientRunner(hw_arch=hw_arch)
-    explicit_end_nodes = [n for n in (end_nodes or []) if n.strip()]
+    explicit_end_nodes = _parse_node_names(end_nodes)
     try:
         if explicit_end_nodes:
             runner.translate_onnx_model(
@@ -152,10 +168,7 @@ def convert_onnx_to_hef(
         # end node names (e.g. "... using these end node names: /a, /b").
         if explicit_end_nodes:
             raise
-        match = re.search(r"using these end node names:\s*(.+)$", str(exc))
-        if not match:
-            raise
-        suggested_end_nodes = [n.strip() for n in match.group(1).split(",") if n.strip()]
+        suggested_end_nodes = _extract_suggested_end_nodes(str(exc))
         if not suggested_end_nodes:
             raise
         print(
