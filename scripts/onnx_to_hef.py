@@ -103,7 +103,7 @@ def _permute_calib_to_expected_shape(
     calib_data: "np.ndarray", expected_shape: tuple[int, ...]
 ) -> "np.ndarray | None":
     """Return calibration data permuted to expected sample shape when possible."""
-    sample_shape = tuple(int(dim) for dim in calib_data.shape[1:])
+    sample_shape = tuple(calib_data.shape[1:])
     if len(sample_shape) != len(expected_shape):
         return None
     if len(sample_shape) > 4:
@@ -126,7 +126,8 @@ def _permute_calib_to_expected_shape(
         return None
     if perm == list(range(len(sample_shape))):
         return calib_data
-    return calib_data.transpose((0, *(i + 1 for i in perm)))
+    batch_first_axes = tuple([0, *[i + 1 for i in perm]])
+    return calib_data.transpose(batch_first_axes)
 
 
 # ---------------------------------------------------------------------------
