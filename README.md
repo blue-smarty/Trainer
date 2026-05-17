@@ -47,6 +47,10 @@ python scripts/onnx_to_hef.py --onnx runs/detect/train/weights/best.onnx --hw-ar
 
 # With calibration images for better INT8 quantization accuracy
 python scripts/onnx_to_hef.py --onnx best.onnx --hw-arch hailo8l --calib-path data/calib_images
+
+# If parser errors suggest specific end nodes, pass them explicitly
+python scripts/onnx_to_hef.py --onnx best.onnx --hw-arch hailo8l \
+  --end-node /model.22/Sigmoid --end-node /model.22/Concat
 ```
 
 This produces a `.hef` file in the same directory as the ONNX file. Use

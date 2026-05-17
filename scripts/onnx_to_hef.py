@@ -12,6 +12,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 # Supported Hailo hardware architectures.  Kept here so that the dashboard
@@ -81,6 +82,7 @@ def convert_onnx_to_hef(
     hw_arch: str = "hailo8l",
     calib_path: str | None = None,
     input_shape: tuple[int, int] = (640, 640),
+    end_nodes: list[str] | None = None,
 ) -> Path:
     """Convert *onnx_path* to a Hailo HEF file.
 
@@ -99,6 +101,8 @@ def convert_onnx_to_hef(
         data is used as a fallback.
     input_shape:
         ``(height, width)`` of the model input (default ``(640, 640)``).
+    end_nodes:
+        Optional ONNX graph end node names to pass to the Hailo parser.
 
     Returns
     -------
@@ -133,7 +137,36 @@ def convert_onnx_to_hef(
     model_name = onnx_file.stem
 
     runner = ClientRunner(hw_arch=hw_arch)
-    runner.translate_onnx_model(str(onnx_file), model_name)
+    explicit_end_nodes = [n for n in (end_nodes or []) if n.strip()]
+    try:
+        if explicit_end_nodes:
+            runner.translate_onnx_model(
+                str(onnx_file),
+                model_name,
+                end_node_names=explicit_end_nodes,
+            )
+        else:
+            runner.translate_onnx_model(str(onnx_file), model_name)
+    except Exception as exc:
+        # Common Hailo parser failure mode: a parse error that includes suggested
+        # end node names (e.g. "... using these end node names: /a, /b").
+        if explicit_end_nodes:
+            raise
+        match = re.search(r"using these end node names:\s*(.+)$", str(exc))
+        if not match:
+            raise
+        suggested_end_nodes = [n.strip() for n in match.group(1).split(",") if n.strip()]
+        if not suggested_end_nodes:
+            raise
+        print(
+            "ONNX parser suggested end nodes; retrying with: "
+            f"{', '.join(suggested_end_nodes)}"
+        )
+        runner.translate_onnx_model(
+            str(onnx_file),
+            model_name,
+            end_node_names=suggested_end_nodes,
+        )
 
     h, w = input_shape
     if calib_path:
@@ -194,6 +227,16 @@ def parse_args() -> argparse.Namespace:
         default=640,
         help="Model input image size in pixels (default: 640)",
     )
+    parser.add_argument(
+        "--end-node",
+        action="append",
+        default=None,
+        metavar="NODE",
+        help=(
+            "Optional ONNX end node name for Hailo parsing. "
+            "Pass multiple times for multiple nodes."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -205,6 +248,7 @@ def main() -> None:
         hw_arch=args.hw_arch,
         calib_path=args.calib_path,
         input_shape=(args.imgsz, args.imgsz),
+        end_nodes=args.end_node,
     )
     print(f"HEF file written to: {hef_path}")
 
