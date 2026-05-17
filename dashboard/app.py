@@ -16,10 +16,12 @@ from dashboard.validation import (
     validate_setup_params,
     validate_train_params,
     validate_export_params,
+    validate_hef_params,
 )
 from dashboard.artifacts import (
     find_recent_runs,
     find_all_onnx,
+    find_all_hef,
     format_size,
     format_mtime,
     infer_onnx_path,
@@ -89,6 +91,8 @@ with st.sidebar:
                     st.markdown(f"📄 `last.pt` ({format_size(run.last_pt)})")
                 for onnx in run.onnx_files:
                     st.markdown(f"🔷 `{onnx.name}` ({format_size(onnx)})")
+                for hef in run.hef_files:
+                    st.markdown(f"🟢 `{hef.name}` ({format_size(hef)})")
     else:
         st.info("No training runs found yet.")
 
@@ -96,8 +100,8 @@ with st.sidebar:
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab_setup, tab_train, tab_export, tab_artifacts = st.tabs(
-    ["Setup Dataset", "Train Model", "Export ONNX", "Artifacts"]
+tab_setup, tab_train, tab_export, tab_hef, tab_artifacts = st.tabs(
+    ["Setup Dataset", "Train Model", "Export ONNX", "Convert to HEF", "Artifacts"]
 )
 
 # ── Setup Dataset ────────────────────────────────────────────────────────────
@@ -387,6 +391,104 @@ with tab_export:
                 except Exception as exc:  # pragma: no cover - UI feedback path
                     show_exception(exc)
 
+# ── Convert to HEF ────────────────────────────────────────────────────────────
+
+with tab_hef:
+    st.subheader("Convert ONNX to Hailo HEF")
+    st.markdown(
+        "Compile a `.onnx` model to a `.hef` file using the **Hailo Dataflow Compiler**. "
+        "Requires the [Hailo SDK](https://developer.hailo.ai) to be installed."
+    )
+
+    all_onnx_files = find_all_onnx(REPO_ROOT)
+    onnx_options = (
+        [str(p.relative_to(REPO_ROOT)) for p in all_onnx_files]
+        if all_onnx_files
+        else ["(no .onnx files found — run Export ONNX first)"]
+    )
+    onnx_input = st.selectbox(
+        "ONNX file",
+        options=onnx_options,
+        help="Select the .onnx file to compile.",
+    )
+
+    hw_arch = st.selectbox(
+        "Hardware architecture",
+        options=["hailo8l", "hailo8", "hailo8r"],
+        index=0,
+        help=(
+            "`hailo8l` — Hailo-8L (Raspberry Pi 5 AI HAT+, 13 TOPS)  \n"
+            "`hailo8` — Hailo-8 (26 TOPS)  \n"
+            "`hailo8r` — Hailo-8R"
+        ),
+    )
+
+    calib_path = st.text_input(
+        "Calibration images directory (optional)",
+        value="",
+        help=(
+            "Path to a folder of representative images. "
+            "Providing real images produces more accurate INT8 quantization. "
+            "Leave blank to use random calibration data as a fallback."
+        ),
+    )
+
+    with st.expander("Advanced options"):
+        col_imgsz, col_outdir = st.columns(2)
+        with col_imgsz:
+            hef_imgsz = st.number_input(
+                "Image size",
+                min_value=32,
+                value=640,
+                step=32,
+                key="hef_img",
+                help="Model input resolution (must match the value used during ONNX export).",
+            )
+        with col_outdir:
+            output_dir = st.text_input(
+                "Output directory (optional)",
+                value="",
+                key="hef_outdir",
+                help="Where to save the .hef file. Defaults to the same directory as the ONNX file.",
+            )
+
+    if st.button("Run HEF conversion", type="primary"):
+        result = validate_hef_params(
+            onnx_path=onnx_input,
+            hw_arch=hw_arch,
+            calib_path=calib_path,
+            repo_root=REPO_ROOT,
+        )
+        if show_validation(result):
+            onnx_file_path = (REPO_ROOT / onnx_input).resolve()
+            out_dir = (REPO_ROOT / output_dir).resolve() if output_dir.strip() else None
+            with st.spinner("Compiling ONNX → HEF — this may take several minutes…"):
+                try:
+                    from scripts.onnx_to_hef import convert_onnx_to_hef
+
+                    hef_path = convert_onnx_to_hef(
+                        onnx_path=str(onnx_file_path),
+                        output_dir=str(out_dir) if out_dir else None,
+                        hw_arch=hw_arch,
+                        calib_path=calib_path.strip() if calib_path.strip() else None,
+                        input_shape=(int(hef_imgsz), int(hef_imgsz)),
+                    )
+                    st.success("HEF compilation completed.")
+                    st.markdown("**Output file**")
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.code(str(hef_path), language="text")
+                    with col2:
+                        st.metric("HEF size", format_size(hef_path))
+                except ImportError as exc:
+                    st.error(str(exc))
+                    st.info(
+                        "Install the Hailo SDK from https://developer.hailo.ai "
+                        "and re-run the conversion."
+                    )
+                except Exception as exc:  # pragma: no cover - UI feedback path
+                    show_exception(exc)
+
 # ── Artifacts ─────────────────────────────────────────────────────────────────
 
 with tab_artifacts:
@@ -429,6 +531,14 @@ with tab_artifacts:
                             f"modified {format_mtime(onnx)})"
                         )
 
+                if run.hef_files:
+                    st.markdown("**HEF files:**")
+                    for hef in run.hef_files:
+                        st.markdown(
+                            f"- 🟢 `{hef}` ({format_size(hef)}, "
+                            f"modified {format_mtime(hef)})"
+                        )
+
     st.divider()
     st.markdown("#### All ONNX files in repository")
     all_onnx = find_all_onnx(REPO_ROOT)
@@ -439,3 +549,14 @@ with tab_artifacts:
             )
     else:
         st.info("No .onnx files found in the repository yet.")
+
+    st.divider()
+    st.markdown("#### All HEF files in repository")
+    all_hef = find_all_hef(REPO_ROOT)
+    if all_hef:
+        for hef in all_hef:
+            st.markdown(
+                f"- 🟢 `{hef}` ({format_size(hef)}, modified {format_mtime(hef)})"
+            )
+    else:
+        st.info("No .hef files found in the repository yet.")
