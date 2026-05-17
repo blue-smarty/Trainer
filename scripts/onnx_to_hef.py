@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import re
-from itertools import permutations
 from pathlib import Path
 
 # Supported Hailo hardware architectures.  Kept here so that the dashboard
@@ -110,18 +109,24 @@ def _permute_calib_to_expected_shape(
     if len(sample_shape) > 4:
         return None
 
-    # Fast path for the common CHW <-> HWC mismatch.
-    if len(sample_shape) == 3 and sample_shape == (
-        expected_shape[2],
-        expected_shape[0],
-        expected_shape[1],
-    ):
-        return calib_data.transpose((0, 2, 3, 1))
+    used = [False] * len(sample_shape)
+    perm: list[int] = []
+    for dim in expected_shape:
+        match_idx = None
+        for idx, sample_dim in enumerate(sample_shape):
+            if not used[idx] and sample_dim == dim:
+                match_idx = idx
+                break
+        if match_idx is None:
+            return None
+        used[match_idx] = True
+        perm.append(match_idx)
 
-    for perm in permutations(range(len(sample_shape))):
-        if tuple(sample_shape[i] for i in perm) == expected_shape:
-            return calib_data.transpose((0, *(i + 1 for i in perm)))
-    return None
+    if tuple(sample_shape[i] for i in perm) != expected_shape:
+        return None
+    if perm == list(range(len(sample_shape))):
+        return calib_data
+    return calib_data.transpose((0, *(i + 1 for i in perm)))
 
 
 # ---------------------------------------------------------------------------
