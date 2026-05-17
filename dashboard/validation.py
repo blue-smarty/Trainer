@@ -135,6 +135,46 @@ def _check_data_yaml(data_path: Path, errors: list[str], warnings: list[str]) ->
                     )
 
 
+def validate_hef_params(
+    onnx_path: str,
+    hw_arch: str,
+    calib_path: str,
+    repo_root: Path | None = None,
+) -> ValidationResult:
+    """Validate parameters before running convert_onnx_to_hef."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not onnx_path or not onnx_path.strip():
+        errors.append("ONNX file path must not be empty.")
+    else:
+        p = Path(onnx_path)
+        if repo_root and not p.is_absolute():
+            p = (repo_root / onnx_path).resolve()
+        if not p.exists():
+            errors.append(f"ONNX file not found: {p}")
+        elif p.suffix.lower() != ".onnx":
+            warnings.append(
+                f"Selected file does not have a .onnx extension: '{p.name}'"
+            )
+
+    valid_archs = {"hailo8", "hailo8l", "hailo8r"}
+    if hw_arch not in valid_archs:
+        errors.append(
+            f"Unknown hardware architecture '{hw_arch}'. "
+            f"Choose one of: {', '.join(sorted(valid_archs))}"
+        )
+
+    if calib_path and calib_path.strip():
+        calib_dir = Path(calib_path)
+        if not calib_dir.exists():
+            errors.append(f"Calibration directory not found: {calib_dir}")
+        elif not calib_dir.is_dir():
+            errors.append(f"Calibration path is not a directory: {calib_dir}")
+
+    return ValidationResult(errors=errors, warnings=warnings)
+
+
 def validate_export_params(
     weights: str,
     imgsz: int,

@@ -16,6 +16,7 @@ class RunInfo:
     mtime: float
     weights: list[Path] = field(default_factory=list)
     onnx_files: list[Path] = field(default_factory=list)
+    hef_files: list[Path] = field(default_factory=list)
 
     @property
     def best_pt(self) -> Path | None:
@@ -62,6 +63,9 @@ def find_recent_runs(runs_root: Path, max_runs: int = 10) -> list[RunInfo]:
         onnx_files: list[Path] = sorted(
             candidate.rglob("*.onnx"), key=lambda p: p.stat().st_mtime
         )
+        hef_files: list[Path] = sorted(
+            candidate.rglob("*.hef"), key=lambda p: p.stat().st_mtime
+        )
 
         infos.append(
             RunInfo(
@@ -70,6 +74,7 @@ def find_recent_runs(runs_root: Path, max_runs: int = 10) -> list[RunInfo]:
                 mtime=mtime,
                 weights=weights,
                 onnx_files=onnx_files,
+                hef_files=hef_files,
             )
         )
 
@@ -83,6 +88,14 @@ def find_all_onnx(repo_root: Path) -> list[Path]:
     onnx_files = list(repo_root.rglob("*.onnx"))
     onnx_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return onnx_files
+
+
+def find_all_hef(repo_root: Path) -> list[Path]:
+    """Return all ``.hef`` files found anywhere under *repo_root*, newest first."""
+    repo_root = Path(repo_root)
+    hef_files = list(repo_root.rglob("*.hef"))
+    hef_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return hef_files
 
 
 def format_size(path: Path) -> str:
