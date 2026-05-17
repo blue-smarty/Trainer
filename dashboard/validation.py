@@ -7,6 +7,8 @@ from typing import NamedTuple
 
 import yaml
 
+from scripts.onnx_to_hef import VALID_HW_ARCHS
+
 
 class ValidationResult(NamedTuple):
     errors: list[str]
@@ -158,7 +160,7 @@ def validate_hef_params(
                 f"Selected file does not have a .onnx extension: '{p.name}'"
             )
 
-    valid_archs = {"hailo8", "hailo8l", "hailo8r"}
+    valid_archs = set(VALID_HW_ARCHS)
     if hw_arch not in valid_archs:
         errors.append(
             f"Unknown hardware architecture '{hw_arch}'. "
@@ -167,6 +169,8 @@ def validate_hef_params(
 
     if calib_path and calib_path.strip():
         calib_dir = Path(calib_path)
+        if repo_root and not calib_dir.is_absolute():
+            calib_dir = (repo_root / calib_path).resolve()
         if not calib_dir.exists():
             errors.append(f"Calibration directory not found: {calib_dir}")
         elif not calib_dir.is_dir():

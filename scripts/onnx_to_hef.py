@@ -14,6 +14,15 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+# Supported Hailo hardware architectures.  Kept here so that the dashboard
+# validator can import the same tuple and avoid drift.
+VALID_HW_ARCHS: tuple[str, ...] = ("hailo8", "hailo8l", "hailo8r")
+
+# Number of randomly generated images used when no calibration directory is
+# provided.  16 frames gives the compiler enough statistical diversity for a
+# basic quantization pass while remaining fast.
+_DEFAULT_RANDOM_CALIB_IMAGES = 16
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -131,7 +140,7 @@ def convert_onnx_to_hef(
         calib_data = _load_calibration_images(calib_path, h, w)
     else:
         # Use random calibration data as fallback — less accurate quantization.
-        calib_data = np.random.rand(16, 3, h, w).astype(np.float32)
+        calib_data = np.random.rand(_DEFAULT_RANDOM_CALIB_IMAGES, 3, h, w).astype(np.float32)
 
     runner.optimize(calib_data)
 
@@ -164,7 +173,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--hw-arch",
         default="hailo8l",
-        choices=["hailo8", "hailo8l", "hailo8r"],
+        choices=list(VALID_HW_ARCHS),
         help="Target Hailo hardware architecture (default: hailo8l)",
     )
     parser.add_argument(
